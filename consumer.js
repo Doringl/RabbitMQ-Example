@@ -1,4 +1,7 @@
 const amqp = require('amqplib');
+const redis = require('redis');
+
+const client = redis.createClient();
 
 const queueName = process.argv[2] || 'jobsQueue';
 
@@ -19,7 +22,17 @@ async function connect_Rabbit() {
       const userInfo = data.find((user) => user.id == messageInfo.id);
       if (userInfo) {
         console.log('Mesaj alındı .', userInfo);
-        channel.ack(message);
+        client.set(
+          `user_${userInfo.id}`,
+          JSON.stringify(userInfo),
+          (err, res) => {
+            if (!err) {
+              console.log(`${userInfo.id} added ... `, res);
+              channel.ack(message);
+            }
+            console.log(err);
+          }
+        );
       }
     });
   } catch (error) {
